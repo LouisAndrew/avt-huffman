@@ -9,7 +9,7 @@ export default class HuffmanEncoder {
    * @param {HuffmanNode} nodeB Second huffman node.
    */
     static byCountDescending(nodeA, nodeB) {
-        return nodeB.count - nodeA.count;
+        return nodeA.count - nodeB.count;
     }
 
     /**
@@ -45,10 +45,8 @@ export default class HuffmanEncoder {
    * @returns {Map<number, string>} Map of symbol values with corresponding binary codes.
    */
     static getCodes(rootNode) {
-    // * Creates object (map) of symbols -> go through every nodes
         const codes = new Map();
         this.getPathForNode(rootNode, codes, '');
-        console.log({ codes, rootNode });
 
         return codes;
     }
@@ -83,16 +81,47 @@ export default class HuffmanEncoder {
    * @returns {string} Huffman encoded binary data as a string of bits.
    */
     static encodeData(codes, sourceData) {
-    // * Input -> Audio data?
-    // * Output -> Compressed audio data as binary?
-
-        const encodedString = '';
         const sourceBytes = Array.from(Array(sourceData.byteLength)).map(
             (_, index) => sourceData.getUint8(index),
         );
 
-        console.log({ codes, sourceData, sourceBytes });
+        const encodedHuffmanCode = sourceBytes
+            .map((byteData) => codes.get(byteData))
+            .reduce((a, b) => `${a}${b}`, '');
+        const vlcHeader = this.createVLCHeader(codes);
 
-        return encodedString;
+        return `${this.toBits(16, vlcHeader.length)}${vlcHeader}${encodedHuffmanCode}`;
+    }
+
+    /**
+   * Helper function to convert numeric value to Bits with predefined length.
+   * @param {number} length Length of the converted value in Bits.
+   * @param {number} value Value of the number to be converted in Bits.
+   * @returns {string}
+   */
+    static toBits(length, value) {
+        return value.toString(2).padStart(length, '0');
+    }
+
+    /**
+   * Helper function to cretae symbol code pair required for the VLC header
+   * @param {number} symbol Value of the symbol.
+   * @param {string} code Encoded code for the symbol as result of huffman encoding.
+   * @returns {string} Symbol-Code pair (See README.md file).
+   */
+    static createSymbolCodePair(symbol, code) {
+        const codeLength = code.length;
+        return `${this.toBits(8, codeLength)}${this.toBits(8, symbol)}${code}`;
+    }
+
+    /**
+   * Helper function to create VLC header for the Huffman-Binary data
+   * @param {Map<number, string>} codes Map of symbol values with corresponding binary codes.
+   * @returns {string}
+   */
+    static createVLCHeader(codes) {
+        return [...codes.entries()]
+            .map(([symbol, code]) => this.createSymbolCodePair(symbol, code))
+            .reduce((a, b) => `${a}${b}`, '');
     }
 }
